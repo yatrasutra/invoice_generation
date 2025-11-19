@@ -7,11 +7,22 @@ const DynamicForm = ({ onSuccess }) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isEditingTerms, setIsEditingTerms] = useState(false);
+  const [termsText, setTermsText] = useState(`• Advance payment confirms the booking.
+
+• Balance payment is due 10 days before check-in.
+
+• Package once confirmed is non-refundable as per the company cancellation policy.
+
+• Any change in travel dates or number of guests is subject to availability and price revision.
+
+• All communication and receipts are issued under Yatrasutra Holidays Pvt. Ltd.`);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
   } = useForm();
 
   useEffect(() => {
@@ -35,7 +46,12 @@ const DynamicForm = ({ onSuccess }) => {
     setError('');
 
     try {
-      await formAPI.submitForm(data);
+      // Include the custom terms text in the submission
+      const submissionData = {
+        ...data,
+        customTerms: termsText,
+      };
+      await formAPI.submitForm(submissionData);
       onSuccess && onSuccess();
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -43,6 +59,24 @@ const DynamicForm = ({ onSuccess }) => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSaveTerms = () => {
+    setIsEditingTerms(false);
+  };
+
+  const handleCancelEdit = () => {
+    // Reset to default terms
+    setTermsText(`• Advance payment confirms the booking.
+
+• Balance payment is due 10 days before check-in.
+
+• Package once confirmed is non-refundable as per the company cancellation policy.
+
+• Any change in travel dates or number of guests is subject to availability and price revision.
+
+• All communication and receipts are issued under Yatrasutra Holidays Pvt. Ltd.`);
+    setIsEditingTerms(false);
   };
 
   if (loading) {
@@ -65,10 +99,40 @@ const DynamicForm = ({ onSuccess }) => {
     );
   }
 
+  // Label overrides to replace backend labels
+  const labelOverrides = {
+    'Client Name': 'Guest Name',
+    'clientName': 'Guest Name',
+    'Hotel Name': 'Hotel/Property Name',
+    'Property Name': 'Hotel/Property Name',
+    'Accommodation Name': 'Hotel/Property Name',
+    'hotelName': 'Hotel/Property Name',
+    'propertyName': 'Hotel/Property Name',
+    'accommodationName': 'Hotel/Property Name',
+    'Discount': 'Discount Amount (INR)',
+    'Discount Amount': 'Discount Amount (INR)',
+    'Discount Percentage': 'Discount (%)',
+    'Discount Details': 'Discount Details',
+    'discount': 'Discount Amount (INR)',
+    'discountAmount': 'Discount Amount (INR)',
+    'discountPercentage': 'Discount (%)',
+    'discountDetails': 'Discount Details',
+    'Terms and Notes': 'Terms & Conditions / Notes',
+    'Terms And Notes': 'Terms & Conditions / Notes',
+    'termsAndNotes': 'Terms & Conditions / Notes',
+    'termsNotes': 'Terms & Conditions / Notes',
+  };
+
+  // Function to get display label with overrides
+  const getDisplayLabel = (field) => {
+    return labelOverrides[field.label] || labelOverrides[field.name] || field.label;
+  };
+
   const renderField = (field) => {
+    const displayLabel = getDisplayLabel(field);
     const commonProps = {
       ...register(field.name, {
-        required: field.required ? `${field.label} is required` : false,
+        required: field.required ? `${displayLabel} is required` : false,
         min: field.min,
         max: field.max,
       }),
@@ -119,7 +183,7 @@ const DynamicForm = ({ onSuccess }) => {
               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             />
             <label htmlFor={field.name} className="ml-2 text-sm text-gray-700">
-              {field.label}
+              {displayLabel}
             </label>
           </div>
         );
@@ -130,9 +194,19 @@ const DynamicForm = ({ onSuccess }) => {
   };
 
   // Group fields into sections
-  const clientFields = schema?.fields?.slice(0, 3) || [];
-  const bookingFields = schema?.fields?.slice(3, 10) || [];
-  const costFields = schema?.fields?.slice(10) || [];
+  const allFields = schema?.fields || [];
+  
+  // Filter out terms checkbox and terms/notes textarea to place them separately at the bottom
+  const fieldsWithoutTerms = allFields.filter(field => 
+    field.name !== 'terms' && 
+    field.name !== 'termsAndNotes' && 
+    field.name !== 'termsNotes'
+  );
+  const termsField = allFields.find(field => field.name === 'terms');
+  
+  const guestFields = fieldsWithoutTerms.slice(0, 3);
+  const bookingFields = fieldsWithoutTerms.slice(3, 10);
+  const costFields = fieldsWithoutTerms.slice(10);
 
   return (
     <div className="space-y-6">
@@ -168,7 +242,7 @@ const DynamicForm = ({ onSuccess }) => {
         )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
-        {/* Client Details Section */}
+        {/* Guest Details Section */}
         <div>
           <div className="flex items-center gap-3 mb-6">
             <div className="h-10 w-10 bg-primary-100 rounded-xl flex items-center justify-center">
@@ -182,11 +256,11 @@ const DynamicForm = ({ onSuccess }) => {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {clientFields.map((field) => (
+            {guestFields.map((field) => (
               <div key={field.name} className={field.name === 'clientName' ? 'md:col-span-2' : ''}>
                 {field.type !== 'checkbox' && (
                   <label htmlFor={field.name} className="block text-sm font-semibold text-gray-700 mb-2">
-                    {field.label}
+                    {getDisplayLabel(field)}
                     {field.required && <span className="text-red-500 ml-1">*</span>}
                   </label>
                 )}
@@ -221,7 +295,7 @@ const DynamicForm = ({ onSuccess }) => {
               <div key={field.name}>
                 {field.type !== 'checkbox' && (
                   <label htmlFor={field.name} className="block text-sm font-semibold text-gray-700 mb-2">
-                    {field.label}
+                    {getDisplayLabel(field)}
                     {field.required && <span className="text-red-500 ml-1">*</span>}
                   </label>
                 )}
@@ -256,7 +330,7 @@ const DynamicForm = ({ onSuccess }) => {
               <div key={field.name} className={field.name === 'additionalServices' ? 'md:col-span-2' : ''}>
                 {field.type !== 'checkbox' && (
                   <label htmlFor={field.name} className="block text-sm font-semibold text-gray-700 mb-2">
-                    {field.label}
+                    {getDisplayLabel(field)}
                     {field.required && <span className="text-red-500 ml-1">*</span>}
                   </label>
                 )}
@@ -273,6 +347,115 @@ const DynamicForm = ({ onSuccess }) => {
           </div>
         </div>
 
+        {/* Terms and Conditions */}
+        <div className="pt-6">
+          <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-gray-800 to-gray-700 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Terms & Conditions
+              </h3>
+              
+              {/* Edit/Save Buttons */}
+              {!isEditingTerms ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingTerms(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all duration-200 text-sm font-semibold"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveTerms}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-all duration-200 text-sm font-semibold"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all duration-200 text-sm font-semibold"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* Terms Content - View or Edit Mode */}
+            <div className="px-6 py-5 bg-gray-50">
+              {!isEditingTerms ? (
+                // View Mode
+                <div className="max-h-64 overflow-y-auto">
+                  <div className="space-y-3 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {termsText.split('\n').map((line, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        {line.trim().startsWith('•') && (
+                          <>
+                            <span className="text-primary-600 font-bold mt-0.5">•</span>
+                            <p>{line.trim().substring(1).trim()}</p>
+                          </>
+                        )}
+                        {!line.trim().startsWith('•') && line.trim() && <p className="ml-6">{line}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                // Edit Mode
+                <textarea
+                  value={termsText}
+                  onChange={(e) => setTermsText(e.target.value)}
+                  rows={12}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm text-gray-700 leading-relaxed resize-none"
+                  placeholder="Enter terms and conditions..."
+                />
+              )}
+            </div>
+            
+            {/* Checkbox Agreement */}
+            <div className="px-6 py-4 bg-white border-t-2 border-gray-200">
+              {termsField && (
+                <>
+                  <div className="flex items-start gap-3">
+                    <input
+                      {...register(termsField.name, {
+                        required: termsField.required ? 'You must agree to the terms and conditions' : false,
+                      })}
+                      id={termsField.name}
+                      type="checkbox"
+                      className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded mt-0.5"
+                    />
+                    <label htmlFor={termsField.name} className="text-sm font-medium text-gray-700 cursor-pointer">
+                      I have read and agree to the above Terms & Conditions
+                    </label>
+                  </div>
+                  {errors[termsField.name] && (
+                    <p className="mt-2 text-sm text-red-600 ml-8">
+                      {errors[termsField.name].message}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="pt-8 mt-8 border-t-2 border-gray-100">
           <div className="bg-gradient-to-br from-primary-50 to-blue-50 rounded-2xl p-6 mb-6">
             <div className="flex items-start gap-4">
@@ -284,7 +467,6 @@ const DynamicForm = ({ onSuccess }) => {
               <div className="flex-1">
                 <h4 className="font-bold text-gray-900 mb-1">Ready to Submit?</h4>
                 <p className="text-sm text-gray-600">
-                  By submitting this form, you agree to our terms and conditions. 
                   Our admin team will review your booking and get back to you within 24 hours.
                 </p>
               </div>

@@ -22,9 +22,12 @@ const SubmissionModal = ({ submission, onClose, onApprove, onReject }) => {
   };
 
   const fieldLabels = {
-    clientName: 'Client Name',
+    clientName: 'Guest Name',
     email: 'Email Address',
     contactNo: 'Contact Number',
+    hotelName: 'Hotel/Property Name',
+    propertyName: 'Hotel/Property Name',
+    accommodationName: 'Hotel/Property Name',
     destination: 'Destination',
     duration: 'Duration (Nights)',
     checkInDate: 'Check-in Date',
@@ -34,9 +37,16 @@ const SubmissionModal = ({ submission, onClose, onApprove, onReject }) => {
     mealPlan: 'Meal Plan',
     costPerAdult: 'Cost per Adult (INR)',
     additionalServices: 'Additional Services',
+    discount: 'Discount Amount (INR)',
+    discountAmount: 'Discount Amount (INR)',
+    discountPercentage: 'Discount (%)',
+    discountDetails: 'Discount Details',
     advanceAmount: 'Advance Amount (INR)',
     paymentMode: 'Payment Mode',
     terms: 'Terms Accepted',
+    termsAndNotes: 'Terms & Conditions / Notes',
+    termsNotes: 'Terms & Conditions / Notes',
+    customTerms: 'Custom Terms & Conditions',
     // Legacy fields for backward compatibility
     fullName: 'Full Name',
     phone: 'Phone Number',
@@ -86,8 +96,11 @@ const SubmissionModal = ({ submission, onClose, onApprove, onReject }) => {
     if ((key === 'checkInDate' || key === 'checkOutDate' || key === 'dateOfBirth') && value) {
       return new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     }
-    if ((key === 'costPerAdult' || key === 'advanceAmount') && value) {
+    if ((key === 'costPerAdult' || key === 'advanceAmount' || key === 'discount' || key === 'discountAmount') && value) {
       return `₹${parseFloat(value).toLocaleString('en-IN')}`;
+    }
+    if (key === 'discountPercentage' && value) {
+      return `${value}%`;
     }
     if (key === 'duration' && value) {
       return `${value} Nights`;
@@ -148,11 +161,11 @@ const SubmissionModal = ({ submission, onClose, onApprove, onReject }) => {
             <div className="border-t border-gray-200 pt-4">
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {Object.entries(submission.data).map(([key, value]) => (
-                  <div key={key} className="sm:col-span-1">
+                  <div key={key} className={key === 'customTerms' ? 'sm:col-span-2' : 'sm:col-span-1'}>
                     <dt className="text-sm font-medium text-gray-500">
                       {fieldLabels[key] || key.replace(/([A-Z])/g, ' $1').trim()}
                     </dt>
-                    <dd className="mt-1 text-sm text-gray-900">
+                    <dd className={`mt-1 text-sm text-gray-900 ${key === 'customTerms' ? 'whitespace-pre-wrap bg-gray-50 p-3 rounded-lg' : ''}`}>
                       {formatValue(key, value)}
                     </dd>
                   </div>
