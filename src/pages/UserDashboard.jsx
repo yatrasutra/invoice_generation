@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { formAPI } from '../services/api';
+import { formAPI, itineraryAPI } from '../services/api';
 import DynamicForm from '../components/DynamicForm';
 import SubmissionsList from '../components/SubmissionsList';
+import ItineraryForm from '../components/ItineraryForm';
+import ItinerarySubmissionsList from '../components/ItinerarySubmissionsList';
 
 const UserDashboard = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('form');
   const [submissions, setSubmissions] = useState([]);
+  const [itinerarySubmissions, setItinerarySubmissions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
 
   useEffect(() => {
     if (activeTab === 'submissions') {
       fetchSubmissions();
+    } else if (activeTab === 'itinerary-submissions') {
+      fetchItinerarySubmissions();
     }
   }, [activeTab]);
 
@@ -30,6 +35,19 @@ const UserDashboard = () => {
     }
   };
 
+  const fetchItinerarySubmissions = async () => {
+    setLoading(true);
+    try {
+      const response = await itineraryAPI.getMySubmissions();
+      setItinerarySubmissions(response.data.submissions);
+    } catch (error) {
+      console.error('Error fetching itinerary submissions:', error);
+      showNotification('Failed to fetch itinerary submissions', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 5000);
@@ -39,6 +57,12 @@ const UserDashboard = () => {
     showNotification('Form submitted successfully! Waiting for admin approval.', 'success');
     setActiveTab('submissions');
     fetchSubmissions();
+  };
+
+  const handleItinerarySubmit = () => {
+    showNotification('Itinerary submitted successfully! Waiting for admin approval.', 'success');
+    setActiveTab('itinerary-submissions');
+    fetchItinerarySubmissions();
   };
 
   return (
@@ -106,7 +130,7 @@ const UserDashboard = () => {
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-soft p-2 mb-8 inline-flex gap-2">
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-soft p-2 mb-8 inline-flex gap-2 flex-wrap">
           <button
             onClick={() => setActiveTab('form')}
             className={`${
@@ -133,6 +157,32 @@ const UserDashboard = () => {
             </svg>
             My Bookings
           </button>
+          <button
+            onClick={() => setActiveTab('itinerary-form')}
+            className={`${
+              activeTab === 'itinerary-form'
+                ? 'bg-gradient-to-r from-purple-600 to-primary-500 text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+            } px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Create Itinerary
+          </button>
+          <button
+            onClick={() => setActiveTab('itinerary-submissions')}
+            className={`${
+              activeTab === 'itinerary-submissions'
+                ? 'bg-gradient-to-r from-purple-600 to-primary-500 text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+            } px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            My Itineraries
+          </button>
         </div>
 
         {/* Content */}
@@ -150,6 +200,24 @@ const UserDashboard = () => {
               </div>
             ) : (
               <SubmissionsList submissions={submissions} onUpdate={fetchSubmissions} />
+            )}
+          </div>
+        )}
+
+        {activeTab === 'itinerary-form' && (
+          <div className="max-w-5xl mx-auto">
+            <ItineraryForm onSuccess={handleItinerarySubmit} />
+          </div>
+        )}
+
+        {activeTab === 'itinerary-submissions' && (
+          <div>
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+              </div>
+            ) : (
+              <ItinerarySubmissionsList submissions={itinerarySubmissions} onUpdate={fetchItinerarySubmissions} />
             )}
           </div>
         )}

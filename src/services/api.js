@@ -39,6 +39,24 @@ export const adminAPI = {
   rejectSubmission: (id, message) => api.post(`/api/admin/form/${id}/reject`, { message }),
 };
 
+// Itinerary APIs
+export const itineraryAPI = {
+  getSchema: () => api.get('/api/itinerary/schema'),
+  submitItinerary: (data) => api.post('/api/itinerary/submit', { data }),
+  getMySubmissions: () => api.get('/api/itinerary/my-submissions'),
+  getSubmission: (id) => api.get(`/api/itinerary/${id}`),
+  downloadBrochure: (id) => api.get(`/api/itinerary/${id}/download`, { 
+    responseType: 'blob' 
+  }),
+};
+
+// Admin Itinerary APIs
+export const adminItineraryAPI = {
+  getSubmissions: (status = 'all') => api.get(`/api/admin/itineraries?status=${status}`),
+  approveItinerary: (id) => api.post(`/api/admin/itinerary/${id}/approve`),
+  rejectItinerary: (id, message) => api.post(`/api/admin/itinerary/${id}/reject`, { message }),
+};
+
 export default api;
 
 

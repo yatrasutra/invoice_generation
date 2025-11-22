@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { adminAPI } from '../services/api';
+import { adminAPI, adminItineraryAPI } from '../services/api';
 import SubmissionModal from '../components/SubmissionModal';
+import ItineraryModal from '../components/ItineraryModal';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
+  const [managementType, setManagementType] = useState('invoices'); // 'invoices' or 'itineraries'
   const [submissions, setSubmissions] = useState([]);
+  const [itinerarySubmissions, setItinerarySubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('pending');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [selectedItinerary, setSelectedItinerary] = useState(null);
   const [notification, setNotification] = useState(null);
 
   useEffect(() => {
-    fetchSubmissions();
-  }, [filter]);
+    if (managementType === 'invoices') {
+      fetchSubmissions();
+    } else {
+      fetchItinerarySubmissions();
+    }
+  }, [filter, managementType]);
 
   const fetchSubmissions = async () => {
     setLoading(true);
@@ -23,6 +31,19 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error fetching submissions:', error);
       showNotification('Failed to fetch submissions', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchItinerarySubmissions = async () => {
+    setLoading(true);
+    try {
+      const response = await adminItineraryAPI.getSubmissions(filter);
+      setItinerarySubmissions(response.data.submissions);
+    } catch (error) {
+      console.error('Error fetching itinerary submissions:', error);
+      showNotification('Failed to fetch itinerary submissions', 'error');
     } finally {
       setLoading(false);
     }
@@ -57,6 +78,30 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleApproveItinerary = async (itineraryId) => {
+    try {
+      await adminItineraryAPI.approveItinerary(itineraryId);
+      showNotification('Itinerary approved successfully!', 'success');
+      setSelectedItinerary(null);
+      fetchItinerarySubmissions();
+    } catch (error) {
+      console.error('Error approving itinerary:', error);
+      showNotification(error.response?.data?.error || 'Failed to approve itinerary', 'error');
+    }
+  };
+
+  const handleRejectItinerary = async (itineraryId, message) => {
+    try {
+      await adminItineraryAPI.rejectItinerary(itineraryId, message);
+      showNotification('Itinerary rejected', 'success');
+      setSelectedItinerary(null);
+      fetchItinerarySubmissions();
+    } catch (error) {
+      console.error('Error rejecting itinerary:', error);
+      showNotification(error.response?.data?.error || 'Failed to reject itinerary', 'error');
+    }
+  };
+
   const getStatusBadge = (status) => {
     const badges = {
       pending: 'badge badge-pending',
@@ -66,11 +111,13 @@ const AdminDashboard = () => {
     return badges[status] || 'badge';
   };
 
+  const currentSubmissions = managementType === 'invoices' ? submissions : itinerarySubmissions;
+  
   const stats = {
-    total: submissions.length,
-    pending: submissions.filter(s => s.status === 'pending').length,
-    approved: submissions.filter(s => s.status === 'approved').length,
-    rejected: submissions.filter(s => s.status === 'rejected').length,
+    total: currentSubmissions.length,
+    pending: currentSubmissions.filter(s => s.status === 'pending').length,
+    approved: currentSubmissions.filter(s => s.status === 'approved').length,
+    rejected: currentSubmissions.filter(s => s.status === 'rejected').length,
   };
 
   return (
@@ -134,13 +181,51 @@ const AdminDashboard = () => {
       )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Management Type Toggle */}
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-soft p-2 mb-8 inline-flex gap-2">
+          <button
+            onClick={() => {
+              setManagementType('invoices');
+              setFilter('pending');
+            }}
+            className={`${
+              managementType === 'invoices'
+                ? 'bg-gradient-to-r from-primary-600 to-blue-600 text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+            } px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Invoice Bookings
+          </button>
+          <button
+            onClick={() => {
+              setManagementType('itineraries');
+              setFilter('pending');
+            }}
+            className={`${
+              managementType === 'itineraries'
+                ? 'bg-gradient-to-r from-purple-600 to-primary-600 text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+            } px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            Itinerary Brochures
+          </button>
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-xl p-6 text-white hover:scale-105 transition-transform duration-300">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-            <div className="relative">
+              <div className="relative">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-blue-100 text-sm font-semibold uppercase tracking-wide">Total Bookings</p>
+                <p className="text-blue-100 text-sm font-semibold uppercase tracking-wide">
+                  Total {managementType === 'invoices' ? 'Bookings' : 'Itineraries'}
+                </p>
                 <div className="h-10 w-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                   <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
@@ -211,7 +296,7 @@ const AdminDashboard = () => {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             </svg>
-            All Bookings
+            All {managementType === 'invoices' ? 'Bookings' : 'Itineraries'}
           </button>
           <button
             onClick={() => setFilter('pending')}
@@ -259,7 +344,7 @@ const AdminDashboard = () => {
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
           </div>
-        ) : submissions.length === 0 ? (
+        ) : currentSubmissions.length === 0 ? (
           <div className="card text-center py-12">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"
@@ -276,10 +361,10 @@ const AdminDashboard = () => {
             </svg>
             <h3 className="mt-2 text-sm font-medium text-gray-900">No submissions found</h3>
             <p className="mt-1 text-sm text-gray-500">
-              {filter === 'all' ? 'No submissions yet.' : `No ${filter} submissions.`}
+              {filter === 'all' ? `No ${managementType === 'invoices' ? 'bookings' : 'itineraries'} yet.` : `No ${filter} ${managementType === 'invoices' ? 'bookings' : 'itineraries'}.`}
             </p>
           </div>
-        ) : (
+        ) : managementType === 'invoices' ? (
           <div className="space-y-4">
             {submissions.map((submission) => (
               <div key={submission.id} className="card hover:shadow-travel transition-all duration-300 transform hover:-translate-y-1 border-2 border-transparent hover:border-primary-200">
@@ -347,6 +432,73 @@ const AdminDashboard = () => {
               </div>
             ))}
           </div>
+        ) : (
+          <div className="space-y-4">
+            {itinerarySubmissions.map((submission) => (
+              <div key={submission.id} className="card hover:shadow-travel transition-all duration-300 transform hover:-translate-y-1 border-2 border-transparent hover:border-purple-200">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-12 w-12 bg-gradient-to-br from-purple-500 to-primary-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 mb-1">
+                          {submission.data?.destination || 'Untitled Itinerary'}
+                        </h3>
+                        <span className={getStatusBadge(submission.status)}>
+                          {submission.status.charAt(0).toUpperCase() + submission.status.slice(1)}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm ml-15">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="font-medium">{submission.data?.travelDate || 'N/A'}</span>
+                      </div>
+                      {submission.data?.duration && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                          </svg>
+                          <span className="font-medium">{submission.data.duration} Nights</span>
+                        </div>
+                      )}
+                      {submission.data?.days && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                          <span className="font-medium">{submission.data.days.length} Day Itinerary</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-medium">{new Date(submission.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedItinerary(submission)}
+                    className="btn-primary ml-4 flex items-center gap-2 px-5 py-3"
+                  >
+                    <span>View Details</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -357,6 +509,16 @@ const AdminDashboard = () => {
           onClose={() => setSelectedSubmission(null)}
           onApprove={handleApprove}
           onReject={handleReject}
+        />
+      )}
+
+      {/* Itinerary Modal */}
+      {selectedItinerary && (
+        <ItineraryModal
+          submission={selectedItinerary}
+          onClose={() => setSelectedItinerary(null)}
+          onApprove={handleApproveItinerary}
+          onReject={handleRejectItinerary}
         />
       )}
     </div>
