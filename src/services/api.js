@@ -48,6 +48,7 @@ export const itineraryAPI = {
   downloadBrochure: (id) => api.get(`/api/itinerary/${id}/download`, { 
     responseType: 'blob' 
   }),
+  uploadImage: (base64Image) => api.post('/api/itinerary/upload-image', { image: base64Image }),
 };
 
 // Admin Itinerary APIs

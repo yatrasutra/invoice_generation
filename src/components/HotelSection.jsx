@@ -1,11 +1,12 @@
 import React from 'react';
+import ImageUpload from './ImageUpload';
 
-const HotelSection = ({ hotels, onChange }) => {
+const HotelSection = ({ hotels, onChange, mealPlanOptions = [] }) => {
   const handleHotelChange = (index, field, value) => {
     const updatedHotels = [...hotels];
     updatedHotels[index] = {
       ...updatedHotels[index],
-      [field]: field.includes('Cost') ? parseFloat(value) || 0 : value,
+      [field]: field === 'numberOfRooms' ? parseInt(value) || 0 : value,
     };
     onChange(updatedHotels);
   };
@@ -14,10 +15,16 @@ const HotelSection = ({ hotels, onChange }) => {
     onChange([
       ...hotels,
       {
+        nightNumber: hotels.length + 1,
+        location: '',
+        checkInDate: '',
         name: '',
-        category: '3*',
-        packageCostPerPerson: 0,
-        packageCostPerChild: 0,
+        starRating: '3*',
+        roomType: '',
+        numberOfRooms: 1,
+        paxDistribution: '',
+        mealPlan: 'BREAKFAST',
+        imageUrl: '',
       },
     ]);
   };
@@ -25,6 +32,10 @@ const HotelSection = ({ hotels, onChange }) => {
   const removeHotel = (index) => {
     if (hotels.length > 1) {
       const updatedHotels = hotels.filter((_, i) => i !== index);
+      // Renumber nights
+      updatedHotels.forEach((hotel, i) => {
+        hotel.nightNumber = i + 1;
+      });
       onChange(updatedHotels);
     }
   };
@@ -33,8 +44,8 @@ const HotelSection = ({ hotels, onChange }) => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-base font-bold text-gray-900">Hotel Options</h4>
-          <p className="text-sm text-gray-600">Provide multiple accommodation choices</p>
+          <h4 className="text-base font-bold text-gray-900">Accommodation Options</h4>
+          <p className="text-sm text-gray-600">One hotel entry per night</p>
         </div>
         <button
           type="button"
@@ -52,8 +63,13 @@ const HotelSection = ({ hotels, onChange }) => {
         {hotels.map((hotel, index) => (
           <div
             key={index}
-            className="bg-white rounded-2xl p-5 border-2 border-gray-200 hover:border-primary-200 transition-all duration-300 relative group"
+            className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-5 border-2 border-amber-200 relative group hover:shadow-lg transition-all duration-300"
           >
+            {/* Night Number Badge */}
+            <div className="absolute -top-3 -left-3 h-12 w-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-sm">Night {hotel.nightNumber}</span>
+            </div>
+
             {/* Remove Button */}
             {hotels.length > 1 && (
               <button
@@ -68,17 +84,36 @@ const HotelSection = ({ hotels, onChange }) => {
               </button>
             )}
 
-            {/* Hotel Badge */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-8 w-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                </svg>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Location <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={hotel.location}
+                  onChange={(e) => handleHotelChange(index, 'location', e.target.value)}
+                  placeholder="Port Blair"
+                  className="input-field"
+                  required
+                />
               </div>
-              <span className="text-sm font-bold text-gray-700">Hotel Option {index + 1}</span>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Check-in Date */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Check-in Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={hotel.checkInDate}
+                  onChange={(e) => handleHotelChange(index, 'checkInDate', e.target.value)}
+                  className="input-field"
+                  required
+                />
+              </div>
+
               {/* Hotel Name */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -88,60 +123,112 @@ const HotelSection = ({ hotels, onChange }) => {
                   type="text"
                   value={hotel.name}
                   onChange={(e) => handleHotelChange(index, 'name', e.target.value)}
-                  placeholder="e.g., IBIS Frazer Park"
+                  placeholder="Sea Shell Resort"
                   className="input-field"
                   required
                 />
               </div>
 
-              {/* Hotel Category */}
+              {/* Star Rating */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Category <span className="text-red-500">*</span>
+                  Star Rating <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={hotel.category}
-                  onChange={(e) => handleHotelChange(index, 'category', e.target.value)}
+                  value={hotel.starRating}
+                  onChange={(e) => handleHotelChange(index, 'starRating', e.target.value)}
                   className="input-field"
                   required
                 >
                   <option value="3*">3 Star</option>
                   <option value="4*">4 Star</option>
                   <option value="5*">5 Star</option>
+                  <option value="Resort">Resort</option>
+                  <option value="Budget">Budget</option>
                 </select>
               </div>
 
-              {/* Package Cost Per Person */}
+              {/* Room Type */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Cost Per Person (INR) <span className="text-red-500">*</span>
+                  Room Type <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="number"
-                  value={hotel.packageCostPerPerson}
-                  onChange={(e) => handleHotelChange(index, 'packageCostPerPerson', e.target.value)}
-                  placeholder="21400"
-                  min="0"
-                  step="100"
+                  type="text"
+                  value={hotel.roomType}
+                  onChange={(e) => handleHotelChange(index, 'roomType', e.target.value)}
+                  placeholder="Deluxe Sea View"
                   className="input-field"
                   required
                 />
               </div>
 
-              {/* Package Cost Per Child */}
+              {/* Number of Rooms */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Cost Per Child (INR) <span className="text-red-500">*</span>
+                  Number of Rooms <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
-                  value={hotel.packageCostPerChild}
-                  onChange={(e) => handleHotelChange(index, 'packageCostPerChild', e.target.value)}
-                  placeholder="17000"
-                  min="0"
-                  step="100"
+                  value={hotel.numberOfRooms}
+                  onChange={(e) => handleHotelChange(index, 'numberOfRooms', e.target.value)}
+                  placeholder="2"
+                  min="1"
                   className="input-field"
                   required
+                />
+              </div>
+
+              {/* Pax Distribution */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Pax Distribution <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={hotel.paxDistribution}
+                  onChange={(e) => handleHotelChange(index, 'paxDistribution', e.target.value)}
+                  placeholder="2 Adults + 1 Child per room"
+                  className="input-field"
+                  required
+                />
+              </div>
+
+              {/* Meal Plan */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Meal Plan <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={hotel.mealPlan}
+                  onChange={(e) => handleHotelChange(index, 'mealPlan', e.target.value)}
+                  className="input-field"
+                  required
+                >
+                  {mealPlanOptions.length > 0 ? (
+                    mealPlanOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="BREAKFAST">Breakfast Only</option>
+                      <option value="HALF BOARD">Half Board</option>
+                      <option value="FULL BOARD">Full Board</option>
+                      <option value="ALL INCLUSIVE">All Inclusive</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {/* Hotel Image Upload */}
+              <div className="md:col-span-2">
+                <ImageUpload
+                  label="Hotel Image"
+                  value={hotel.imageUrl || ''}
+                  onChange={(url) => handleHotelChange(index, 'imageUrl', url)}
+                  required={false}
                 />
               </div>
             </div>
@@ -153,4 +240,6 @@ const HotelSection = ({ hotels, onChange }) => {
 };
 
 export default HotelSection;
+
+
 
