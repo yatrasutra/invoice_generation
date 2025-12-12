@@ -348,7 +348,7 @@ const ItineraryForm = ({ onSuccess }) => {
                   type="number"
                   placeholder="85000"
                   min="1"
-                  step="100"
+                  step="1"
                   className="input-field"
                 />
                 {errors.quotePrice && (
