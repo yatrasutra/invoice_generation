@@ -138,3 +138,4 @@ const ActivityRateCardSection = ({ activities, onChange }) => {
 
 export default ActivityRateCardSection;
 
+
